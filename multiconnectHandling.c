@@ -10,13 +10,14 @@ void* handleEval(void* desc)
     Err error;
     readSize = read( sock, ch, MAX);
 
+    printf("Connection establised!: Sock %d\n");
+
+
     if (readSize <= 0)
     {
         printf("ERROR\n");
     }
-
-    printf("Connection establised!: Sock %d\nwith message length %d\n", sock, readSize);
-
+    
     ch[strlen(ch) - 1] = '\0';
 
 	printf("%lu\n", strlen(ch));
