@@ -115,7 +115,7 @@ int popValList(ValList* list)
 {
     if (isEmptyValList(list))
     {
-        return INT32_MIN;
+        return -1000;
     }
 
     int res = list->pTop->key;
@@ -133,7 +133,7 @@ int evaluate(char* expression, Err* error)
 {
     OperatorList opList;
     ValList valList;
-    
+    int isVal = 0;
     initOpList(&opList);
     initValList(&valList);
 
@@ -154,7 +154,7 @@ int evaluate(char* expression, Err* error)
         if (!isValidOp(expression[i]) && !isValidDigit(expression[i]))
         {
             *error = InvalidFormat;
-            return INT32_MIN;
+            return -1000;
         }
 
         if (expression[i] == '(')
@@ -172,29 +172,33 @@ int evaluate(char* expression, Err* error)
                 count++;
             }
 
-            if (!count)
+            if (count)
             {
-                pushOpList(&opList, expression[i]);
+                char* val = (char*)malloc(count + 2);
+
+                cpyStr(val, expression, i, count + 1);
+
+                pushValList(&valList, atoi(val));
+
+                free(val);
+
+                i += count;
 
                 continue;
             }
-
-            char* val = (char*)malloc(count + 2);
-
-            cpyStr(val, expression, i, count + 1);
-
-            pushValList(&valList, atoi(val));
-
-            free(val);
-
-            i += count;
-
-            continue;
         }
 
         if (isValidDigit(expression[i]))
         {
             int count = 0;
+            if (isVal)
+            {
+                *error = InvalidFormat;
+
+                return -1000;
+            }
+
+            isVal = 1;
 
             while (isValidDigit(expression[i + count]))
             {
@@ -237,13 +241,13 @@ int evaluate(char* expression, Err* error)
 
                 if (*error != NoErr)
                 {
-                    return INT32_MIN;
+                    return -1000;
                 }
             }
 
             continue;
         }
-
+        isVal = 0;
         Precedence pre = getPre(expression[i]);
 
         while (1)
@@ -264,7 +268,7 @@ int evaluate(char* expression, Err* error)
 
             if (*error != NoErr)
             {
-                return INT32_MIN;
+                return -1000;
             }
         }
 
@@ -284,7 +288,7 @@ int evaluate(char* expression, Err* error)
 
         if (*error != NoErr)
         {
-            return INT32_MIN;
+            return -1000;
         }
     }
 
@@ -293,8 +297,8 @@ int evaluate(char* expression, Err* error)
     while (!isEmptyValList(&valList))
     {
         *error = MissingOperand;
-
-        result = INT32_MIN;
+        popValList(&valList);
+        result = -1000;
     }
 
     return result;
