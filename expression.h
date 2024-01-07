@@ -4,7 +4,8 @@
 typedef enum Precedence{
     NoPre = 0,
     PreOne,
-    PreTwo
+    PreTwo,
+    PreThree
 } Precedence;
 
 typedef enum Err {
@@ -53,7 +54,7 @@ char popOpList(OperatorList* list);
 
 int popValList(ValList* list);
 
-int evaluate(char* expression);
+int evaluate(char* expression, Err* error);
 
 int isValidOp(char op);
 
@@ -64,5 +65,9 @@ void cpyStr(char* des, char* src, int pos, int len);
 Err execEpression(ValList* list, char op);
 
 Precedence getPre(char op);
+
+void printOpStack(OperatorList* list);
+
+void printValStack(ValList* list);
 
 #endif

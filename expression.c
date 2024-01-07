@@ -1,6 +1,7 @@
 #include "expression.h"
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 OperatorNode* createOperatorNode(char op)
 {
@@ -30,32 +31,22 @@ ValNode* createValNode(int val)
 
 void initOpList(OperatorList* list)
 {
-    if (list->pTop)
-    {
-        return;
-    }
-
     list->pTop = NULL;
 }
 
 void initValList(ValList* list)
 {
-    if (list->pTop)
-    {
-        return;
-    }
-
     list->pTop = NULL;
 }
 
 int isEmptyOpList(OperatorList* list)
 {
-    return list->pTop;
+    return list->pTop == NULL;
 }
 
 int isEmptyValList(ValList* list)
 {
-    return list->pTop;
+    return list->pTop == NULL;
 }
 
 int pushOpList(OperatorList* list, char op)
@@ -138,7 +129,7 @@ int popValList(ValList* list)
     return res;
 }
 
-int evaluate(char* expression)
+int evaluate(char* expression, Err* error)
 {
     OperatorList opList;
     ValList valList;
@@ -150,6 +141,11 @@ int evaluate(char* expression)
 
     for (int i = 0; i < len; ++i)
     {
+        printf("Eval char expression[%d]: %c\n", i, expression[i]);
+
+        printOpStack(&opList);
+        printValStack(&valList);
+
         if (expression[i] == ' ')
         {
             continue;
@@ -157,17 +153,17 @@ int evaluate(char* expression)
 
         if (!isValidOp(expression[i]) && !isValidDigit(expression[i]))
         {
+            *error = InvalidFormat;
             return INT32_MIN;
         }
 
         if (expression[i] == '(')
         {
             pushOpList(&opList, expression[i]);
-
             continue;
         }
 
-        if (expression[i] == '-' && i != len)
+        if (expression[i] == '-' && i != len - 1)
         {
             int count = 0;
 
@@ -189,6 +185,33 @@ int evaluate(char* expression)
 
             pushValList(&valList, atoi(val));
 
+            free(val);
+
+            i += count;
+
+            continue;
+        }
+
+        if (isValidDigit(expression[i]))
+        {
+            int count = 0;
+
+            while (isValidDigit(expression[i + count]))
+            {
+                count++;
+            }
+
+            char* val = (char*)malloc(count + 1);
+
+            cpyStr(val, expression, i, count);
+
+            printf("Val:-%s-\ncount: %d\n", val, count);
+
+            pushValList(&valList, atoi(val));
+
+            free(val);
+
+            i += count - 1;
             continue;
         }
 
@@ -198,6 +221,8 @@ int evaluate(char* expression)
             {
                 if (isEmptyOpList(&opList))
                 {
+                    *error = MissingOperator;
+
                     return INT32_MIN;
                 }
 
@@ -208,9 +233,9 @@ int evaluate(char* expression)
                     break;
                 }
 
-                Err error = execEpression(&valList, op);
+                *error = execEpression(&valList, op);
 
-                if (error)
+                if (*error != NoErr)
                 {
                     return INT32_MIN;
                 }
@@ -235,9 +260,9 @@ int evaluate(char* expression)
 
             char op = popOpList(&opList);
 
-            Err error = execEpression(&valList, op);
+            *error = execEpression(&valList, op);
 
-            if (error)
+            if (*error != NoErr)
             {
                 return INT32_MIN;
             }
@@ -255,9 +280,9 @@ int evaluate(char* expression)
 
         char op = popOpList(&opList);
 
-        Err error = execEpression(&valList, op);
+        *error = execEpression(&valList, op);
 
-        if (error)
+        if (*error != NoErr)
         {
             return INT32_MIN;
         }
@@ -265,9 +290,11 @@ int evaluate(char* expression)
 
     int result = popValList(&valList);
 
-    if (!isEmptyValList(&valList))
+    while (!isEmptyValList(&valList))
     {
-        return INT32_MIN;
+        *error = MissingOperand;
+
+        result = INT32_MIN;
     }
 
     return result;
@@ -279,7 +306,7 @@ int isValidOp(char op)
 
     switch (op)
     {
-    case '+': case '-': case '*': case '/':
+    case '+': case '-': case '*': case '/': case '(': case ')':
         break;
     default:
         res = 0;
@@ -320,6 +347,7 @@ void cpyStr(char* des, char* src, int pos, int len)
 Err execEpression(ValList* list, char op)
 {
     Err error = NoErr;
+
     if (isEmptyValList(list))
     {
         error = MissingOperand;
@@ -338,7 +366,7 @@ Err execEpression(ValList* list, char op)
 
     int a = popValList(list);
 
-    if (!b && op == '/')
+    if (b == 0 && op == '/')
     {
         error = DivByZero;
 
@@ -379,4 +407,32 @@ Precedence getPre(char op)
     }
 
     return pre;
+}
+
+void printOpStack(OperatorList* list)
+{
+    OperatorNode* node = list->pTop;
+    printf("Print Stack: ");
+
+    while(node)
+    {
+        printf("%c -> ", node->key);
+        node = node->pNext;
+    }
+
+    printf("NULL\n");
+}
+
+void printValStack(ValList* list)
+{
+    ValNode* node = list->pTop;
+    printf("Print Stack: ");
+
+    while(node)
+    {
+        printf("%d -> ", node->key);
+        node = node->pNext;
+    }
+
+    printf("NULL\n");
 }
