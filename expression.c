@@ -163,7 +163,7 @@ int evaluate(char* expression, Err* error)
             continue;
         }
 
-        if (expression[i] == '-' && i != len - 1)
+        if (expression[i] == '-' && i != len - 1 && !isVal)
         {
             int count = 0;
 
@@ -183,6 +183,8 @@ int evaluate(char* expression, Err* error)
                 free(val);
 
                 i += count;
+
+                isVal = 1;
 
                 continue;
             }
